@@ -3,37 +3,28 @@ import logging
 import sqlite3
 from typing import Optional
 
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup
-)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
     ContextTypes,
-    filters
+    filters,
 )
 
 # ================== SOZLAMALAR ======================
-
 BOT_TOKEN = "8533869240:AAHkyCghf6V1fVVw-gB-R66RqvvrxuokUYM"
 
-ADMIN_IDS = { 7872470445 }   # <-- Admin user id (integer)
+ADMIN_IDS = {7872470445}  # <-- Admin user id (integer)
 
-# Majburiy obuna kanallari
-# ("@kanal_username", "Tugmada chiqadigan nom")
 REQUIRED_CHANNELS = [
     ("@kinochi_kuuu", "1-Kanal")
-
 ]
 
 DB_PATH = "media_codes.db"
 
 # =====================================================
-
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
@@ -96,9 +87,7 @@ def list_codes():
     conn.close()
     return rows
 
-
 # ================== YORDAMCHI =========================
-
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
@@ -113,9 +102,7 @@ async def is_user_subscribed(bot, user_id):
             return False
     return True
 
-
 # ================== HANDLERLAR =========================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     bot = context.bot
@@ -123,14 +110,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subscribed = await is_user_subscribed(bot, user_id)
 
     if not subscribed:
-        buttons = []
-        for ch_username, ch_name in REQUIRED_CHANNELS:
-            buttons.append([
-                InlineKeyboardButton(ch_name, url=f"https://t.me/{ch_username[1:]}")
-            ])
-
+        buttons = [[InlineKeyboardButton(ch_name, url=f"https://t.me/{ch_username[1:]}")]
+                   for ch_username, ch_name in REQUIRED_CHANNELS]
         buttons.append([InlineKeyboardButton(" ✅ Obuna bo‘ldim!", callback_data="check_sub")])
-
         keyboard = InlineKeyboardMarkup(buttons)
 
         await update.message.reply_text(
@@ -145,22 +127,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     user_id = query.from_user.id
     bot = context.bot
 
     subscribed = await is_user_subscribed(bot, user_id)
-
     if subscribed:
         await query.edit_message_text("Assalomu alaykum! Iltimos kodni yozing:")
     else:
-        buttons = []
-        for ch_username, ch_name in REQUIRED_CHANNELS:
-            buttons.append([
-                InlineKeyboardButton(ch_name, url=f"https://t.me/{ch_username[1:]}")
-            ])
+        buttons = [[InlineKeyboardButton(ch_name, url=f"https://t.me/{ch_username[1:]}")]
+                   for ch_username, ch_name in REQUIRED_CHANNELS]
         buttons.append([InlineKeyboardButton(" ✅ Obuna bo‘ldim!", callback_data="check_sub")])
-
         keyboard = InlineKeyboardMarkup(buttons)
         await query.edit_message_text(
             "❗ Siz hali barcha kanallarga obuna bo‘lmagansiz!\nIltimos, quyidagi kanallarga obuna bo‘ling:",
@@ -180,16 +156,12 @@ async def add_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     code = context.args[0].strip()
-
     if not update.message.reply_to_message:
         await update.message.reply_text("Iltimos, /add <kod> ni media ustiga REPLY qilib yuboring.")
         return
 
     src = update.message.reply_to_message
-
-    file_id = None
-    file_type = None
-    file_name = None
+    file_id = file_type = file_name = None
 
     if src.photo:
         file_id = src.photo[-1].file_id
@@ -207,7 +179,6 @@ async def add_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     save_code(code, file_id, file_type, file_name)
-
     await update.message.reply_text(f"✅ Kod `{code}` uchun media saqlandi.", parse_mode="Markdown")
 
 
@@ -222,7 +193,6 @@ async def remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     code = context.args[0].strip()
     ok = remove_code(code)
-
     if ok:
         await update.message.reply_text(f"❌ Kod `{code}` o‘chirildi.", parse_mode="Markdown")
     else:
@@ -235,19 +205,14 @@ async def list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     rows = list_codes()
-
     if not rows:
         await update.message.reply_text("Hozircha kodlar yo‘q.")
         return
 
-    result = ""
-    for code, ftype, fname in rows:
-        result += f"{code} — {ftype}\n"
-
+    result = "\n".join(f"{code} — {ftype}" for code, ftype, _ in rows)
     await update.message.reply_text(result)
 
 
-# 🆕 YANGI QO‘SHILDI: BAZANI TOZALASH
 async def clear_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Siz admin emassiz.")
@@ -258,7 +223,6 @@ async def clear_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("DELETE FROM codes")
     conn.commit()
     conn.close()
-
     await update.message.reply_text("🗑 Baza tozalandi! Barcha kodlar o‘chirildi.")
 
 
@@ -266,17 +230,11 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     bot = context.bot
 
-    # OBUNA TEKSHIRUV
     subscribed = await is_user_subscribed(bot, user_id)
-
     if not subscribed:
-        buttons = []
-        for ch_username, ch_name in REQUIRED_CHANNELS:
-            buttons.append([
-                InlineKeyboardButton(ch_name, url=f"https://t.me/{ch_username[1:]}")
-            ])
+        buttons = [[InlineKeyboardButton(ch_name, url=f"https://t.me/{ch_username[1:]}")]
+                   for ch_username, ch_name in REQUIRED_CHANNELS]
         buttons.append([InlineKeyboardButton("Obuna bo‘ldim!", callback_data="check_sub")])
-
         keyboard = InlineKeyboardMarkup(buttons)
 
         await update.message.reply_text(
@@ -285,16 +243,13 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Agar obuna bo‘lgan bo‘lsa – kodni tekshir
     code = update.message.text.strip()
     row = get_by_code(code)
-
     if not row:
         await update.message.reply_text("Bu kod bo‘yicha hech narsa topilmadi!")
         return
 
     file_id, file_type, file_name = row
-
     if file_type == "photo":
         await update.message.reply_photo(photo=file_id)
     elif file_type == "video":
@@ -304,22 +259,18 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Noma’lum media turi.")
 
-
 # ================== MAIN ==============================
-
 def main():
     init_db()
-
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # Handlerlarni qo‘shish
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(check_subscription, pattern="check_sub"))
-
     app.add_handler(CommandHandler("add", add_code))
     app.add_handler(CommandHandler("remove", remove))
     app.add_handler(CommandHandler("listcodes", list_cmd))
-    app.add_handler(CommandHandler("cleardb", clear_db))   # 🆕 Bazani tozalash
-
+    app.add_handler(CommandHandler("cleardb", clear_db))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_code))
 
     print("Bot ishga tushdi...")
