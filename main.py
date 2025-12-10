@@ -2,7 +2,7 @@ import os
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 
-BOT_TOKEN = os.getenv("8533869240:AAHkyCghf6V1fVVw-gB-R66RqvvrxuokUYM")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 ADMIN_ID = 7872470445
 
@@ -118,3 +118,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
