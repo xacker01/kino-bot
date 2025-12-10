@@ -1,9 +1,12 @@
 import os
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    CallbackQueryHandler, ContextTypes, filters
+)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")   # Render dagi URL + /webhook
 ADMIN_ID = 7872470445
 
 MEDIA_DB = {}
@@ -32,10 +35,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(name, url=url)] 
             for name, url in REQUIRED_CHANNELS
         ]
-        keyboard.append([InlineKeyboardButton(" ✅Obuna bo‘ldim", callback_data="check_sub")])
+        keyboard.append([InlineKeyboardButton("✅ Obuna bo‘ldim", callback_data="check_sub")])
 
         await update.message.reply_text(
-            "❗Botdan foydalanish uchun quyidagi kanallarga obuna bo‘ling:",
+            "❗ Botdan foydalanish uchun quyidagi kanallarga obuna bo‘ling:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
@@ -52,7 +55,7 @@ async def check_sub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if await check_subscription(user_id, context):
         await query.message.edit_text("Rahmat! Endi kodni kiriting:")
     else:
-        await query.message.edit_text(" ❌Hali ham obuna bo‘lmadingiz! Obuna bo‘lib qayta urinib ko‘ring.")
+        await query.message.edit_text("❌ Hali ham obuna emassiz!")
 
 
 async def add_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,7 +63,7 @@ async def add_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Siz admin emassiz!")
         return
 
-    await update.message.reply_text(" ✏️Kodni yuboring:")
+    await update.message.reply_text("✏️ Kodni yuboring:")
     context.user_data["waiting_code"] = True
 
 
@@ -88,7 +91,7 @@ async def save_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         MEDIA_DB[code] = file_id
         context.user_data["waiting_media"] = False
 
-        await update.message.reply_text("✅Saqlangan!")
+        await update.message.reply_text("✅ Saqlandi!")
         return
 
 
@@ -98,10 +101,13 @@ async def send_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if code in MEDIA_DB:
         await update.message.reply_video(MEDIA_DB[code])
     else:
-        await update.message.reply_text("❌Bunday kod yo‘q!")
+        await update.message.reply_text("❌ Bunday kod topilmadi!")
 
 
 def main():
+    if not BOT_TOKEN:
+        raise RuntimeError("❌ BOT_TOKEN environment o‘zgaruvchisi topilmadi!")
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -110,12 +116,16 @@ def main():
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_code))
     app.add_handler(MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL, save_media))
-
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_media))
 
-    app.run_polling()
+    # 🔥 Webhook o‘rnatish
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 10000)),
+        url_path=BOT_TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+    )
 
 
 if __name__ == "__main__":
     main()
-
